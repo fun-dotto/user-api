@@ -1,0 +1,23 @@
+openapi: 3.1.0
+info:
+  title: User Service
+  version: 1.0.0
+tags: []
+paths: {}
+components: {}
+servers:
+  - url: http://localhost:8080
+    description: Local
+    variables: {}
+  - url: https://user-api-dev-107577467292.asia-northeast1.run.app
+    description: Development
+    variables: {}
+  - url: https://user-api-stg-107577467292.asia-northeast1.run.app
+    description: Staging
+    variables: {}
+  - url: https://user-api-qa-107577467292.asia-northeast1.run.app
+    description: QA
+    variables: {}
+  - url: https://user-api-107577467292.asia-northeast1.run.app
+    description: Production
+    variables: {}
