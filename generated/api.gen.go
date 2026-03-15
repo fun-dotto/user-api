@@ -288,6 +288,14 @@ func (response UsersV1Detail200JSONResponse) VisitUsersV1DetailResponse(w http.R
 	return json.NewEncoder(w).Encode(response)
 }
 
+type UsersV1Detail404Response struct {
+}
+
+func (response UsersV1Detail404Response) VisitUsersV1DetailResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
 type UsersV1UpsertRequestObject struct {
 	Id   string `json:"id"`
 	Body *UsersV1UpsertJSONRequestBody
