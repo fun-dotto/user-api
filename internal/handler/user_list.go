@@ -8,6 +8,5 @@ import (
 )
 
 func (h *Handler) UsersV1List(_ context.Context, _ api.UsersV1ListRequestObject) (api.UsersV1ListResponseObject, error) {
-	// TODO: ユーザー一覧取得のユースケースを実装する。
 	return nil, fmt.Errorf("not implemented")
 }
