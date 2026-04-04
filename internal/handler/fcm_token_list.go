@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 
 	api "github.com/fun-dotto/api-template/generated"
 )
@@ -11,5 +12,5 @@ func (h *Handler) FCMTokenV1List(ctx context.Context, request api.FCMTokenV1List
 	_ = request
 
 	// TODO: FCMトークン一覧取得のユースケースを実装する。
-	return nil, errNotImplemented
+	return nil, fmt.Errorf("not implemented")
 }
