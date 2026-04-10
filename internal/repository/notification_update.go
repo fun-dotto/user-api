@@ -31,7 +31,7 @@ func (r *NotificationRepository) UpdateNotification(notification domain.Notifica
 			return err
 		}
 
-		for _, userID := range notification.TargetUserIDs {
+		for _, userID := range uniqueStrings(notification.TargetUserIDs) {
 			target := database.NotificationTargetUser{
 				NotificationID: notification.ID,
 				UserID:         userID,
