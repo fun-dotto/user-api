@@ -23,27 +23,29 @@ func (r *NotificationRepository) ListNotifications(filter domain.NotificationLis
 		return nil, err
 	}
 
-	notifications := make([]domain.Notification, 0, len(dbNotifications))
-	for _, n := range dbNotifications {
-		targetUserIDs, err := r.getTargetUserIDs(n.ID)
-		if err != nil {
-			return nil, err
-		}
-		notifications = append(notifications, n.ToDomain(targetUserIDs))
+	if len(dbNotifications) == 0 {
+		return []domain.Notification{}, nil
 	}
 
-	return notifications, nil
-}
+	notificationIDs := make([]string, 0, len(dbNotifications))
+	for _, n := range dbNotifications {
+		notificationIDs = append(notificationIDs, n.ID)
+	}
 
-func (r *NotificationRepository) getTargetUserIDs(notificationID string) ([]string, error) {
-	var targets []database.NotificationTargetUser
-	if err := r.db.Where("notification_id = ?", notificationID).Find(&targets).Error; err != nil {
+	var allTargets []database.NotificationTargetUser
+	if err := r.db.Where("notification_id IN ?", notificationIDs).Find(&allTargets).Error; err != nil {
 		return nil, err
 	}
 
-	userIDs := make([]string, 0, len(targets))
-	for _, t := range targets {
-		userIDs = append(userIDs, t.UserID)
+	targetMap := make(map[string][]string)
+	for _, t := range allTargets {
+		targetMap[t.NotificationID] = append(targetMap[t.NotificationID], t.UserID)
 	}
-	return userIDs, nil
+
+	notifications := make([]domain.Notification, 0, len(dbNotifications))
+	for _, n := range dbNotifications {
+		notifications = append(notifications, n.ToDomain(targetMap[n.ID]))
+	}
+
+	return notifications, nil
 }
