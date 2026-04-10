@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"time"
+
 	api "github.com/fun-dotto/user-api/generated"
 	"github.com/fun-dotto/user-api/internal/domain"
 )
@@ -78,6 +80,50 @@ func toDomainFCMToken(req api.FCMTokenRequest) domain.FCMToken {
 	return domain.FCMToken{
 		Token:  req.Token,
 		UserID: req.UserId,
+	}
+}
+
+func toAPINotification(n domain.Notification) api.Notification {
+	return api.Notification{
+		Id:            n.ID,
+		Title:         n.Title,
+		Message:       n.Message,
+		Url:           n.URL,
+		NotifyAt:      n.NotifyAt.Format(time.RFC3339),
+		IsNotified:    n.IsNotified,
+		TargetUserIds: n.TargetUserIDs,
+	}
+}
+
+func toAPINotifications(notifications []domain.Notification) []api.Notification {
+	result := make([]api.Notification, 0, len(notifications))
+	for _, n := range notifications {
+		result = append(result, toAPINotification(n))
+	}
+	return result
+}
+
+func toDomainNotification(id string, req api.NotificationRequest) (domain.Notification, error) {
+	notifyAt, err := time.Parse(time.RFC3339, req.NotifyAt)
+	if err != nil {
+		return domain.Notification{}, err
+	}
+
+	return domain.Notification{
+		ID:            id,
+		Title:         req.Title,
+		Message:       req.Message,
+		URL:           req.Url,
+		NotifyAt:      notifyAt,
+		TargetUserIDs: req.TargetUserIds,
+	}, nil
+}
+
+func toDomainNotificationListFilter(params api.NotificationV1ListParams) domain.NotificationListFilter {
+	return domain.NotificationListFilter{
+		NotifyAtFrom: params.NotifyAtFrom,
+		NotifyAtTo:   params.NotifyAtTo,
+		IsNotified:   params.IsNotified,
 	}
 }
 
