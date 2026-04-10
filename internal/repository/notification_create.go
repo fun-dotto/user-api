@@ -4,6 +4,7 @@ import (
 	"github.com/fun-dotto/user-api/internal/database"
 	"github.com/fun-dotto/user-api/internal/domain"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 func (r *NotificationRepository) CreateNotification(notification domain.Notification) (domain.Notification, error) {
@@ -11,25 +12,24 @@ func (r *NotificationRepository) CreateNotification(notification domain.Notifica
 
 	dbNotification := database.NotificationFromDomain(notification)
 
-	tx := r.db.Begin()
-
-	if err := tx.Create(&dbNotification).Error; err != nil {
-		tx.Rollback()
-		return domain.Notification{}, err
-	}
-
-	for _, userID := range notification.TargetUserIDs {
-		target := database.NotificationTargetUser{
-			NotificationID: notification.ID,
-			UserID:         userID,
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&dbNotification).Error; err != nil {
+			return err
 		}
-		if err := tx.Create(&target).Error; err != nil {
-			tx.Rollback()
-			return domain.Notification{}, err
-		}
-	}
 
-	if err := tx.Commit().Error; err != nil {
+		for _, userID := range notification.TargetUserIDs {
+			target := database.NotificationTargetUser{
+				NotificationID: notification.ID,
+				UserID:         userID,
+			}
+			if err := tx.Create(&target).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
 		return domain.Notification{}, err
 	}
 

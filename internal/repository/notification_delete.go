@@ -9,26 +9,19 @@ import (
 )
 
 func (r *NotificationRepository) DeleteNotification(id string) error {
-	tx := r.db.Begin()
-
-	var existing database.Notification
-	if err := tx.First(&existing, "id = ?", id).Error; err != nil {
-		tx.Rollback()
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return domain.ErrNotFound
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var existing database.Notification
+		if err := tx.First(&existing, "id = ?", id).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domain.ErrNotFound
+			}
+			return err
 		}
-		return err
-	}
 
-	if err := tx.Where("notification_id = ?", id).Delete(&database.NotificationTargetUser{}).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
+		if err := tx.Where("notification_id = ?", id).Delete(&database.NotificationTargetUser{}).Error; err != nil {
+			return err
+		}
 
-	if err := tx.Delete(&existing).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	return tx.Commit().Error
+		return tx.Delete(&existing).Error
+	})
 }
