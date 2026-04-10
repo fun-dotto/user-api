@@ -7,10 +7,7 @@ import (
 )
 
 func (h *Handler) NotificationV1Create(_ context.Context, request api.NotificationV1CreateRequestObject) (api.NotificationV1CreateResponseObject, error) {
-	notification, err := toDomainNotification("", *request.Body)
-	if err != nil {
-		return nil, err
-	}
+	notification := toDomainNotification("", *request.Body)
 
 	created, err := h.notificationService.CreateNotification(notification)
 	if err != nil {

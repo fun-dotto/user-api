@@ -9,10 +9,7 @@ import (
 )
 
 func (h *Handler) NotificationV1Update(_ context.Context, request api.NotificationV1UpdateRequestObject) (api.NotificationV1UpdateResponseObject, error) {
-	notification, err := toDomainNotification(request.Id, *request.Body)
-	if err != nil {
-		return nil, err
-	}
+	notification := toDomainNotification(request.Id, *request.Body)
 
 	updated, err := h.notificationService.UpdateNotification(notification)
 	if err != nil {

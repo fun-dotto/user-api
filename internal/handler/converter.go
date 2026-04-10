@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"time"
-
 	api "github.com/fun-dotto/user-api/generated"
 	"github.com/fun-dotto/user-api/internal/domain"
 )
@@ -89,7 +87,7 @@ func toAPINotification(n domain.Notification) api.Notification {
 		Title:         n.Title,
 		Message:       n.Message,
 		Url:           n.URL,
-		NotifyAt:      n.NotifyAt.Format(time.RFC3339),
+		NotifyAt:      n.NotifyAt,
 		IsNotified:    n.IsNotified,
 		TargetUserIds: n.TargetUserIDs,
 	}
@@ -103,20 +101,15 @@ func toAPINotifications(notifications []domain.Notification) []api.Notification 
 	return result
 }
 
-func toDomainNotification(id string, req api.NotificationRequest) (domain.Notification, error) {
-	notifyAt, err := time.Parse(time.RFC3339, req.NotifyAt)
-	if err != nil {
-		return domain.Notification{}, err
-	}
-
+func toDomainNotification(id string, req api.NotificationRequest) domain.Notification {
 	return domain.Notification{
 		ID:            id,
 		Title:         req.Title,
 		Message:       req.Message,
 		URL:           req.Url,
-		NotifyAt:      notifyAt,
+		NotifyAt:      req.NotifyAt,
 		TargetUserIDs: req.TargetUserIds,
-	}, nil
+	}
 }
 
 func toDomainNotificationListFilter(params api.NotificationV1ListParams) domain.NotificationListFilter {
