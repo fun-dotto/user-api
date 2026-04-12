@@ -21,9 +21,8 @@ func (r *NotificationRepository) UpdateNotification(notification domain.Notifica
 		}
 
 		dbNotification = database.NotificationFromDomain(notification)
-		dbNotification.IsNotified = existing.IsNotified
 
-		if err := tx.Save(&dbNotification).Error; err != nil {
+		if err := tx.Omit("IsNotified").Save(&dbNotification).Error; err != nil {
 			return err
 		}
 
