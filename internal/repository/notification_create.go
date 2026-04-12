@@ -33,5 +33,5 @@ func (r *NotificationRepository) CreateNotification(notification domain.Notifica
 		return domain.Notification{}, err
 	}
 
-	return dbNotification.ToDomain(notification.TargetUserIDs), nil
+	return dbNotification.ToDomain(uniqueStrings(notification.TargetUserIDs)), nil
 }
