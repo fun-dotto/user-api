@@ -17,12 +17,16 @@ func (r *NotificationRepository) CreateNotification(notification domain.Notifica
 			return err
 		}
 
-		for _, userID := range uniqueStrings(notification.TargetUserIDs) {
-			target := database.NotificationTargetUser{
-				NotificationID: notification.ID,
-				UserID:         userID,
+		uniqueIDs := uniqueStrings(notification.TargetUserIDs)
+		if len(uniqueIDs) > 0 {
+			targets := make([]database.NotificationTargetUser, 0, len(uniqueIDs))
+			for _, userID := range uniqueIDs {
+				targets = append(targets, database.NotificationTargetUser{
+					NotificationID: notification.ID,
+					UserID:         userID,
+				})
 			}
-			if err := tx.Create(&target).Error; err != nil {
+			if err := tx.Create(&targets).Error; err != nil {
 				return err
 			}
 		}
