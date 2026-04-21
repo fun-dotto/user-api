@@ -11,6 +11,7 @@ type NotificationRepository interface {
 	CreateNotification(ctx context.Context, notification domain.Notification) (domain.Notification, error)
 	UpdateNotification(ctx context.Context, notification domain.Notification) (domain.Notification, error)
 	DeleteNotification(ctx context.Context, id string) error
+	DispatchNotifications(ctx context.Context, ids []string) ([]domain.Notification, error)
 }
 
 type NotificationService struct {
