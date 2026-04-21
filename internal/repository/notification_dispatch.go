@@ -5,42 +5,18 @@ import (
 
 	"github.com/fun-dotto/user-api/internal/database"
 	"github.com/fun-dotto/user-api/internal/domain"
-	"gorm.io/gorm"
 )
 
-func (r *NotificationRepository) DispatchNotifications(ctx context.Context, ids []string) ([]domain.Notification, error) {
+func (r *NotificationRepository) GetNotificationsByIDs(ctx context.Context, ids []string) ([]domain.Notification, error) {
 	uniqueIDs := uniqueStrings(ids)
 	if len(uniqueIDs) == 0 {
 		return []domain.Notification{}, nil
 	}
 
 	var dbNotifications []database.Notification
-
-	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("id IN ?", uniqueIDs).Find(&dbNotifications).Error; err != nil {
-			return err
-		}
-		if len(dbNotifications) == 0 {
-			return nil
-		}
-
-		existingIDs := make([]string, 0, len(dbNotifications))
-		for _, n := range dbNotifications {
-			existingIDs = append(existingIDs, n.ID)
-		}
-
-		if err := tx.Model(&database.Notification{}).
-			Where("id IN ?", existingIDs).
-			Update("is_notified", true).Error; err != nil {
-			return err
-		}
-
-		return nil
-	})
-	if err != nil {
+	if err := r.db.WithContext(ctx).Where("id IN ?", uniqueIDs).Find(&dbNotifications).Error; err != nil {
 		return nil, err
 	}
-
 	if len(dbNotifications) == 0 {
 		return []domain.Notification{}, nil
 	}
@@ -62,8 +38,31 @@ func (r *NotificationRepository) DispatchNotifications(ctx context.Context, ids 
 
 	notifications := make([]domain.Notification, 0, len(dbNotifications))
 	for _, n := range dbNotifications {
-		n.IsNotified = true
 		notifications = append(notifications, n.ToDomain(targetMap[n.ID]))
+	}
+
+	return notifications, nil
+}
+
+func (r *NotificationRepository) DispatchNotifications(ctx context.Context, ids []string) ([]domain.Notification, error) {
+	uniqueIDs := uniqueStrings(ids)
+	if len(uniqueIDs) == 0 {
+		return []domain.Notification{}, nil
+	}
+
+	if err := r.db.WithContext(ctx).Model(&database.Notification{}).
+		Where("id IN ?", uniqueIDs).
+		Update("is_notified", true).Error; err != nil {
+		return nil, err
+	}
+
+	notifications, err := r.GetNotificationsByIDs(ctx, uniqueIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range notifications {
+		notifications[i].IsNotified = true
 	}
 
 	return notifications, nil
