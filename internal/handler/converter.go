@@ -82,16 +82,18 @@ func toDomainFCMToken(req api.FCMTokenRequest) domain.FCMToken {
 }
 
 func toAPINotification(n domain.Notification) api.Notification {
-	notification := api.Notification{
+	return api.Notification{
 		Id:                   n.ID,
 		Title:                n.Title,
 		Body:                 n.Body,
 		ImageUrl:             n.ImageURL,
 		AnalyticsLabel:       n.AnalyticsLabel,
 		ApnsSound:            n.APNsSound,
+		ApnsBadge:            n.APNsBadge,
 		ApnsContentAvailable: n.APNsContentAvailable,
 		AndroidChannelId:     n.AndroidChannelID,
 		AndroidPriority:      n.AndroidPriority,
+		AndroidTtlSeconds:    n.AndroidTTLSeconds,
 		WebpushLink:          n.WebpushLink,
 		Url:                  n.URL,
 		NotifyAfter:          n.NotifyAfter,
@@ -99,17 +101,6 @@ func toAPINotification(n domain.Notification) api.Notification {
 		IsNotified:           n.IsNotified,
 		TargetUserIds:        n.TargetUserIDs,
 	}
-
-	if n.APNsBadge != nil {
-		badge := int32(*n.APNsBadge)
-		notification.ApnsBadge = &badge
-	}
-	if n.AndroidTTLSeconds != nil {
-		ttl := int32(*n.AndroidTTLSeconds)
-		notification.AndroidTtlSeconds = &ttl
-	}
-
-	return notification
 }
 
 func toAPINotifications(notifications []domain.Notification) []api.Notification {
@@ -121,33 +112,24 @@ func toAPINotifications(notifications []domain.Notification) []api.Notification 
 }
 
 func toDomainNotification(id string, req api.NotificationRequest) domain.Notification {
-	notification := domain.Notification{
+	return domain.Notification{
 		ID:                   id,
 		Title:                req.Title,
 		Body:                 req.Body,
 		ImageURL:             req.ImageUrl,
 		AnalyticsLabel:       req.AnalyticsLabel,
 		APNsSound:            req.ApnsSound,
+		APNsBadge:            req.ApnsBadge,
 		APNsContentAvailable: req.ApnsContentAvailable,
 		AndroidChannelID:     req.AndroidChannelId,
 		AndroidPriority:      req.AndroidPriority,
+		AndroidTTLSeconds:    req.AndroidTtlSeconds,
 		WebpushLink:          req.WebpushLink,
 		URL:                  req.Url,
 		NotifyAfter:          req.NotifyAfter,
 		NotifyBefore:         req.NotifyBefore,
 		TargetUserIDs:        req.TargetUserIds,
 	}
-
-	if req.ApnsBadge != nil {
-		badge := int(*req.ApnsBadge)
-		notification.APNsBadge = &badge
-	}
-	if req.AndroidTtlSeconds != nil {
-		ttl := int(*req.AndroidTtlSeconds)
-		notification.AndroidTTLSeconds = &ttl
-	}
-
-	return notification
 }
 
 func toDomainNotificationListFilter(params api.NotificationV1ListParams) domain.NotificationListFilter {
