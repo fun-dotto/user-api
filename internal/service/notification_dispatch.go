@@ -66,8 +66,23 @@ func (s *NotificationService) DispatchNotifications(ctx context.Context, ids []s
 		if err != nil {
 			log.Printf("FCM send failed for notification %s: %v", n.ID, err)
 		}
-		if len(successUserIDs) > 0 {
-			deliveries[n.ID] = successUserIDs
+
+		successSet := make(map[string]struct{}, len(successUserIDs))
+		for _, uid := range successUserIDs {
+			successSet[uid] = struct{}{}
+		}
+		delivered := make([]string, 0, len(pendingUserIDs))
+		for _, uid := range pendingUserIDs {
+			if _, ok := successSet[uid]; ok {
+				delivered = append(delivered, uid)
+				continue
+			}
+			if _, hasToken := tokensByUser[uid]; !hasToken {
+				delivered = append(delivered, uid)
+			}
+		}
+		if len(delivered) > 0 {
+			deliveries[n.ID] = delivered
 		}
 	}
 
