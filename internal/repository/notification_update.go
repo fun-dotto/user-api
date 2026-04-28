@@ -8,6 +8,7 @@ import (
 	"github.com/fun-dotto/user-api/internal/database"
 	"github.com/fun-dotto/user-api/internal/domain"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func (r *NotificationRepository) UpdateNotification(ctx context.Context, notification domain.Notification) (domain.Notification, error) {
@@ -30,7 +31,9 @@ func (r *NotificationRepository) UpdateNotification(ctx context.Context, notific
 		}
 
 		var existingTargets []database.NotificationTargetUser
-		if err := tx.Where("notification_id = ?", notification.ID).Find(&existingTargets).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("notification_id = ?", notification.ID).
+			Find(&existingTargets).Error; err != nil {
 			return err
 		}
 		existingNotifiedAt := make(map[string]*time.Time, len(existingTargets))
