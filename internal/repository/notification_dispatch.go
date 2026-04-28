@@ -61,7 +61,7 @@ func (r *NotificationRepository) DispatchNotifications(ctx context.Context, deli
 			continue
 		}
 		db := r.db.WithContext(ctx).Model(&database.NotificationTargetUser{}).
-			Where("notification_id = ? AND user_id IN ? AND notified_at IS NULL", nid, uniqueUsers).
+			Where("notification_id = ? AND user_id IN ?", nid, uniqueUsers).
 			Update("notified_at", now)
 		if db.Error != nil {
 			return nil, db.Error
