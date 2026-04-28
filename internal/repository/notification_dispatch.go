@@ -60,12 +60,15 @@ func (r *NotificationRepository) DispatchNotifications(ctx context.Context, deli
 		if len(uniqueUsers) == 0 {
 			continue
 		}
-		if err := r.db.WithContext(ctx).Model(&database.NotificationTargetUser{}).
+		db := r.db.WithContext(ctx).Model(&database.NotificationTargetUser{}).
 			Where("notification_id = ? AND user_id IN ? AND notified_at IS NULL", nid, uniqueUsers).
-			Update("notified_at", now).Error; err != nil {
-			return nil, err
+			Update("notified_at", now)
+		if db.Error != nil {
+			return nil, db.Error
 		}
-		notificationIDs = append(notificationIDs, nid)
+		if db.RowsAffected > 0 {
+			notificationIDs = append(notificationIDs, nid)
+		}
 	}
 
 	if len(notificationIDs) == 0 {
