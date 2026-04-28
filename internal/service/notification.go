@@ -20,16 +20,20 @@ type FCMTokenRepositoryForNotification interface {
 	ListFCMTokens(ctx context.Context, filter domain.FCMTokenListFilter) ([]domain.FCMToken, error)
 }
 
+type MessagingClient interface {
+	SendEachForMulticast(ctx context.Context, message *messaging.MulticastMessage) (*messaging.BatchResponse, error)
+}
+
 type NotificationService struct {
-	repo             NotificationRepository
-	fcmTokenRepo     FCMTokenRepositoryForNotification
-	messagingClient  *messaging.Client
+	repo            NotificationRepository
+	fcmTokenRepo    FCMTokenRepositoryForNotification
+	messagingClient MessagingClient
 }
 
 func NewNotificationService(
 	repo NotificationRepository,
 	fcmTokenRepo FCMTokenRepositoryForNotification,
-	messagingClient *messaging.Client,
+	messagingClient MessagingClient,
 ) *NotificationService {
 	return &NotificationService{
 		repo:            repo,
