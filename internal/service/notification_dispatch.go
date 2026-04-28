@@ -56,19 +56,17 @@ func (s *NotificationService) DispatchNotifications(ctx context.Context, ids []s
 			continue
 		}
 
-		tokens := collectTokens(pendingUserIDs, tokensByUser)
+		tokens, tokenUserIDs := collectTokens(pendingUserIDs, tokensByUser)
 		if len(tokens) == 0 {
-			deliveries[n.ID] = pendingUserIDs
 			continue
 		}
 
-		sent, err := s.sendToTokens(ctx, n, tokens)
+		successUserIDs, err := s.sendToTokens(ctx, n, tokens, tokenUserIDs)
 		if err != nil {
 			log.Printf("FCM send failed for notification %s: %v", n.ID, err)
-			continue
 		}
-		if sent > 0 {
-			deliveries[n.ID] = pendingUserIDs
+		if len(successUserIDs) > 0 {
+			deliveries[n.ID] = successUserIDs
 		}
 	}
 
@@ -79,9 +77,10 @@ func (s *NotificationService) DispatchNotifications(ctx context.Context, ids []s
 	return s.repo.DispatchNotifications(ctx, deliveries)
 }
 
-func collectTokens(userIDs []string, tokensByUser map[string][]string) []string {
+func collectTokens(userIDs []string, tokensByUser map[string][]string) ([]string, []string) {
 	seen := make(map[string]struct{})
 	tokens := make([]string, 0)
+	tokenUserIDs := make([]string, 0)
 	for _, uid := range userIDs {
 		for _, tk := range tokensByUser[uid] {
 			if _, ok := seen[tk]; ok {
@@ -89,14 +88,15 @@ func collectTokens(userIDs []string, tokensByUser map[string][]string) []string 
 			}
 			seen[tk] = struct{}{}
 			tokens = append(tokens, tk)
+			tokenUserIDs = append(tokenUserIDs, uid)
 		}
 	}
-	return tokens
+	return tokens, tokenUserIDs
 }
 
 const fcmMulticastBatchSize = 500
 
-func (s *NotificationService) sendToTokens(ctx context.Context, n domain.Notification, tokens []string) (int, error) {
+func (s *NotificationService) sendToTokens(ctx context.Context, n domain.Notification, tokens []string, tokenUserIDs []string) ([]string, error) {
 	data := map[string]string{"notification_id": n.ID}
 	if n.URL != nil {
 		data["url"] = *n.URL
@@ -119,7 +119,7 @@ func (s *NotificationService) sendToTokens(ctx context.Context, n domain.Notific
 	apnsConfig := buildAPNSConfig(n)
 	webpushConfig := buildWebpushConfig(n)
 
-	totalSuccess := 0
+	successUserSet := make(map[string]struct{})
 	for start := 0; start < len(tokens); start += fcmMulticastBatchSize {
 		end := min(start+fcmMulticastBatchSize, len(tokens))
 		msg := &messaging.MulticastMessage{
@@ -133,18 +133,37 @@ func (s *NotificationService) sendToTokens(ctx context.Context, n domain.Notific
 		}
 		resp, err := s.messagingClient.SendEachForMulticast(ctx, msg)
 		if err != nil {
-			return totalSuccess, err
+			return collectSuccessUserIDs(tokenUserIDs, successUserSet), err
 		}
-		totalSuccess += resp.SuccessCount
-		if resp.FailureCount > 0 {
-			for i, r := range resp.Responses {
-				if r.Error != nil {
-					log.Printf("FCM delivery failed for notification %s token=%s: %v", n.ID, tokens[start+i], r.Error)
-				}
+		for i, r := range resp.Responses {
+			uid := tokenUserIDs[start+i]
+			if r.Error != nil {
+				log.Printf("FCM delivery failed for notification %s token=%s: %v", n.ID, tokens[start+i], r.Error)
+				continue
 			}
+			successUserSet[uid] = struct{}{}
 		}
 	}
-	return totalSuccess, nil
+	return collectSuccessUserIDs(tokenUserIDs, successUserSet), nil
+}
+
+func collectSuccessUserIDs(tokenUserIDs []string, successUserSet map[string]struct{}) []string {
+	if len(successUserSet) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(successUserSet))
+	result := make([]string, 0, len(successUserSet))
+	for _, uid := range tokenUserIDs {
+		if _, ok := successUserSet[uid]; !ok {
+			continue
+		}
+		if _, dup := seen[uid]; dup {
+			continue
+		}
+		seen[uid] = struct{}{}
+		result = append(result, uid)
+	}
+	return result
 }
 
 func buildAndroidConfig(n domain.Notification) *messaging.AndroidConfig {
