@@ -58,6 +58,7 @@ func (s *NotificationService) DispatchNotifications(ctx context.Context, ids []s
 
 		tokens, tokenUserIDs := collectTokens(pendingUserIDs, tokensByUser)
 		if len(tokens) == 0 {
+			deliveries[n.ID] = pendingUserIDs
 			continue
 		}
 
