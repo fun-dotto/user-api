@@ -54,44 +54,25 @@ func (r *NotificationRepository) DispatchNotifications(ctx context.Context, deli
 	}
 
 	now := time.Now()
-	notificationIDArgs := make([]string, 0)
-	userIDArgs := make([]string, 0)
+	notificationIDs := make([]string, 0, len(deliveries))
 	for nid, userIDs := range deliveries {
 		uniqueUsers := uniqueStrings(userIDs)
-		for _, uid := range uniqueUsers {
-			notificationIDArgs = append(notificationIDArgs, nid)
-			userIDArgs = append(userIDArgs, uid)
-		}
-	}
-	if len(notificationIDArgs) == 0 {
-		return []domain.Notification{}, nil
-	}
-
-	sql := "UPDATE notification_target_users AS ntu " +
-		"SET notified_at = ? " +
-		"FROM unnest(?::text[], ?::text[]) AS t(notification_id, user_id) " +
-		"WHERE ntu.notification_id = t.notification_id " +
-		"AND ntu.user_id = t.user_id " +
-		"AND ntu.notified_at IS NULL " +
-		"RETURNING ntu.notification_id"
-
-	var updated []database.NotificationTargetUser
-	if err := r.db.WithContext(ctx).Raw(sql, now, notificationIDArgs, userIDArgs).Scan(&updated).Error; err != nil {
-		return nil, err
-	}
-
-	if len(updated) == 0 {
-		return []domain.Notification{}, nil
-	}
-
-	notificationIDs := make([]string, 0, len(updated))
-	seen := make(map[string]struct{}, len(updated))
-	for _, row := range updated {
-		if _, ok := seen[row.NotificationID]; ok {
+		if len(uniqueUsers) == 0 {
 			continue
 		}
-		seen[row.NotificationID] = struct{}{}
-		notificationIDs = append(notificationIDs, row.NotificationID)
+		db := r.db.WithContext(ctx).Model(&database.NotificationTargetUser{}).
+			Where("notification_id = ? AND user_id IN ? AND notified_at IS NULL", nid, uniqueUsers).
+			Update("notified_at", now)
+		if db.Error != nil {
+			return nil, db.Error
+		}
+		if db.RowsAffected > 0 {
+			notificationIDs = append(notificationIDs, nid)
+		}
+	}
+
+	if len(notificationIDs) == 0 {
+		return []domain.Notification{}, nil
 	}
 
 	return r.GetNotificationsByIDs(ctx, notificationIDs)
