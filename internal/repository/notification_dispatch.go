@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/fun-dotto/user-api/internal/database"
@@ -54,25 +55,41 @@ func (r *NotificationRepository) DispatchNotifications(ctx context.Context, deli
 	}
 
 	now := time.Now()
-	notificationIDs := make([]string, 0, len(deliveries))
+	placeholders := make([]string, 0)
+	args := make([]any, 0)
+	args = append(args, now)
 	for nid, userIDs := range deliveries {
 		uniqueUsers := uniqueStrings(userIDs)
-		if len(uniqueUsers) == 0 {
-			continue
-		}
-		db := r.db.WithContext(ctx).Model(&database.NotificationTargetUser{}).
-			Where("notification_id = ? AND user_id IN ? AND notified_at IS NULL", nid, uniqueUsers).
-			Update("notified_at", now)
-		if db.Error != nil {
-			return nil, db.Error
-		}
-		if db.RowsAffected > 0 {
-			notificationIDs = append(notificationIDs, nid)
+		for _, uid := range uniqueUsers {
+			placeholders = append(placeholders, "(?, ?)")
+			args = append(args, nid, uid)
 		}
 	}
-
-	if len(notificationIDs) == 0 {
+	if len(placeholders) == 0 {
 		return []domain.Notification{}, nil
+	}
+
+	sql := "UPDATE notification_target_users SET notified_at = ? " +
+		"WHERE (notification_id, user_id) IN (" + strings.Join(placeholders, ", ") + ") " +
+		"AND notified_at IS NULL RETURNING notification_id"
+
+	var updated []database.NotificationTargetUser
+	if err := r.db.WithContext(ctx).Raw(sql, args...).Scan(&updated).Error; err != nil {
+		return nil, err
+	}
+
+	if len(updated) == 0 {
+		return []domain.Notification{}, nil
+	}
+
+	notificationIDs := make([]string, 0, len(updated))
+	seen := make(map[string]struct{}, len(updated))
+	for _, row := range updated {
+		if _, ok := seen[row.NotificationID]; ok {
+			continue
+		}
+		seen[row.NotificationID] = struct{}{}
+		notificationIDs = append(notificationIDs, row.NotificationID)
 	}
 
 	return r.GetNotificationsByIDs(ctx, notificationIDs)
