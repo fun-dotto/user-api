@@ -21,8 +21,8 @@ func (r *NotificationRepository) ListNotifications(ctx context.Context, filter d
 			query = query.Where(`NOT EXISTS (SELECT 1 FROM notification_target_users tu WHERE tu.notification_id = notifications.id AND tu.notified_at IS NULL)
 				AND EXISTS (SELECT 1 FROM notification_target_users tu WHERE tu.notification_id = notifications.id)`)
 		} else {
-			query = query.Where(`EXISTS (SELECT 1 FROM notification_target_users tu WHERE tu.notification_id = notifications.id AND tu.notified_at IS NULL)
-				OR NOT EXISTS (SELECT 1 FROM notification_target_users tu WHERE tu.notification_id = notifications.id)`)
+			query = query.Where(`(EXISTS (SELECT 1 FROM notification_target_users tu WHERE tu.notification_id = notifications.id AND tu.notified_at IS NULL)
+				OR NOT EXISTS (SELECT 1 FROM notification_target_users tu WHERE tu.notification_id = notifications.id))`)
 		}
 	}
 
