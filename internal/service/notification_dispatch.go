@@ -21,9 +21,6 @@ func (s *NotificationService) DispatchNotifications(ctx context.Context, ids []s
 	userIDSet := make(map[string]struct{})
 	for _, n := range notifications {
 		for _, t := range n.TargetUsers {
-			if t.NotifiedAt != nil {
-				continue
-			}
 			userIDSet[t.UserID] = struct{}{}
 		}
 	}
@@ -47,9 +44,6 @@ func (s *NotificationService) DispatchNotifications(ctx context.Context, ids []s
 	for _, n := range notifications {
 		pendingUserIDs := make([]string, 0, len(n.TargetUsers))
 		for _, t := range n.TargetUsers {
-			if t.NotifiedAt != nil {
-				continue
-			}
 			pendingUserIDs = append(pendingUserIDs, t.UserID)
 		}
 		if len(pendingUserIDs) == 0 {
