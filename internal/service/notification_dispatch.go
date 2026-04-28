@@ -64,7 +64,7 @@ func (s *NotificationService) DispatchNotifications(ctx context.Context, ids []s
 
 		successUserIDs, err := s.sendToTokens(ctx, n, tokens, tokenUserIDs)
 		if err != nil {
-			log.Printf("FCM send failed for notification %s: %v", n.ID, err)
+			log.Printf("FCM send partially failed for notification %s (success=%d/%d users): %v", n.ID, len(successUserIDs), len(pendingUserIDs), err)
 		}
 
 		successSet := make(map[string]struct{}, len(successUserIDs))
