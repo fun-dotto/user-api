@@ -13,7 +13,7 @@ type NotificationRepository interface {
 	UpdateNotification(ctx context.Context, notification domain.Notification) (domain.Notification, error)
 	DeleteNotification(ctx context.Context, id string) error
 	GetNotificationsByIDs(ctx context.Context, ids []string) ([]domain.Notification, error)
-	DispatchNotifications(ctx context.Context, ids []string) ([]domain.Notification, error)
+	DispatchNotifications(ctx context.Context, deliveries map[string][]string) ([]domain.Notification, error)
 }
 
 type FCMTokenRepositoryForNotification interface {

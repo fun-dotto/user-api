@@ -20,8 +20,11 @@ func (s *NotificationService) DispatchNotifications(ctx context.Context, ids []s
 
 	userIDSet := make(map[string]struct{})
 	for _, n := range notifications {
-		for _, uid := range n.TargetUserIDs {
-			userIDSet[uid] = struct{}{}
+		for _, t := range n.TargetUsers {
+			if t.NotifiedAt != nil {
+				continue
+			}
+			userIDSet[t.UserID] = struct{}{}
 		}
 	}
 
@@ -40,11 +43,22 @@ func (s *NotificationService) DispatchNotifications(ctx context.Context, ids []s
 		}
 	}
 
-	successIDs := make([]string, 0, len(notifications))
+	deliveries := make(map[string][]string, len(notifications))
 	for _, n := range notifications {
-		tokens := collectTokens(n.TargetUserIDs, tokensByUser)
+		pendingUserIDs := make([]string, 0, len(n.TargetUsers))
+		for _, t := range n.TargetUsers {
+			if t.NotifiedAt != nil {
+				continue
+			}
+			pendingUserIDs = append(pendingUserIDs, t.UserID)
+		}
+		if len(pendingUserIDs) == 0 {
+			continue
+		}
+
+		tokens := collectTokens(pendingUserIDs, tokensByUser)
 		if len(tokens) == 0 {
-			successIDs = append(successIDs, n.ID)
+			deliveries[n.ID] = pendingUserIDs
 			continue
 		}
 
@@ -54,15 +68,15 @@ func (s *NotificationService) DispatchNotifications(ctx context.Context, ids []s
 			continue
 		}
 		if sent > 0 {
-			successIDs = append(successIDs, n.ID)
+			deliveries[n.ID] = pendingUserIDs
 		}
 	}
 
-	if len(successIDs) == 0 {
+	if len(deliveries) == 0 {
 		return []domain.Notification{}, nil
 	}
 
-	return s.repo.DispatchNotifications(ctx, successIDs)
+	return s.repo.DispatchNotifications(ctx, deliveries)
 }
 
 func collectTokens(userIDs []string, tokensByUser map[string][]string) []string {
